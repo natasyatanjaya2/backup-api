@@ -22,7 +22,7 @@ const upload = multer({
 });
 
 // ===== ENDPOINT UPLOAD =====
-app.post("/backup/upload", upload.single("file"), (req, res) => {
+app.post("/", upload.single("file"), (req, res) => {
 
     // 1️⃣ Validasi API Key
     const apiKey = req.headers["x-api-key"];
