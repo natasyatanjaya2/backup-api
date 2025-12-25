@@ -24,25 +24,25 @@ const upload = multer({
 // ===== ENDPOINT UPLOAD =====
 app.post("/", upload.single("file"), (req, res) => {
 
-    // 1️⃣ Validasi API Key
+    // Validasi API Key
     const apiKey = req.headers["x-api-key"];
     if (!apiKey || apiKey !== API_KEY) {
         return res.status(401).json({ error: "Unauthorized" });
     }
 
-    // 2️⃣ Validasi file
+    // Validasi file
     if (!req.file) {
         return res.status(400).json({ error: "File tidak ditemukan" });
     }
 
-    // 3️⃣ Rename & simpan
+    // Rename & simpan
     const filename =
         Date.now() + "_" + req.file.originalname.replace(/\s/g, "_");
 
     const targetPath = path.join(STORAGE_DIR, filename);
     fs.renameSync(req.file.path, targetPath);
 
-    // 4️⃣ Response
+    // Response
     res.json({
         success: true,
         filename: filename
