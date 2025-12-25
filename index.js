@@ -46,6 +46,11 @@ const upload = multer({
     limits: { fileSize: 50 * 1024 * 1024 } // 50MB
 });
 
+app.use((req, res, next) => {
+    console.log("➡️ Incoming:", req.method, req.url);
+    next();
+});
+
 // =======================
 // ENDPOINT UPLOAD
 // =======================
