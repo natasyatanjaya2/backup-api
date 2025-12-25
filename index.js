@@ -55,10 +55,11 @@ app.use((req, res, next) => {
 // ENDPOINT UPLOAD
 // =======================
 app.post("/backup/upload", upload.single("file"), async (req, res) => {
+  console.log("➡️ REQUEST MASUK");
+  console.log("API_KEY HEADER:", req.headers["x-api-key"]);
+  console.log("API_KEY ENV:", process.env.API_KEY);
+  
   try {
-    console.log("API_KEY ENV:", process.env.API_KEY);
-    console.log("API_KEY HEADER:", req.headers["x-api-key"]);
-    
     const apiKey = req.headers["x-api-key"];
     if (apiKey !== process.env.API_KEY) {
       return res.status(401).json({ error: "Unauthorized" });
