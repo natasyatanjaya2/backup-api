@@ -23,9 +23,6 @@ const r2 = new S3Client({
   }
 });
 
-console.log("API_KEY ENV:", process.env.API_KEY);
-console.log("API_KEY HEADER:", req.headers["x-api-key"]);
-
 // =======================
 // VALIDASI ENV
 // =======================
@@ -54,6 +51,9 @@ const upload = multer({
 // =======================
 app.post("/backup/upload", upload.single("file"), async (req, res) => {
   try {
+    console.log("API_KEY ENV:", process.env.API_KEY);
+    console.log("API_KEY HEADER:", req.headers["x-api-key"]);
+    
     const apiKey = req.headers["x-api-key"];
     if (apiKey !== process.env.API_KEY) {
       return res.status(401).json({ error: "Unauthorized" });
