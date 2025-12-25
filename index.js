@@ -2,6 +2,7 @@ const express = require("express");
 const multer = require("multer");
 const fs = require("fs");
 const path = require("path");
+const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -9,11 +10,27 @@ const PORT = process.env.PORT || 3000;
 // =======================
 // CONFIG
 // =======================
-const API_KEY = process.env.API_KEY; // WAJIB dari ENV
-const STORAGE_DIR = "storage";
+const API_KEY = process.env.API_KEY;
+const TEMP_DIR = "temp";
 
-const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
+// =======================
+// VALIDASI ENV
+// =======================
+if (!API_KEY) {
+  console.error("❌ API_KEY belum diset");
+  process.exit(1);
+}
 
+// =======================
+// PASTIKAN FOLDER TEMP ADA
+// =======================
+if (!fs.existsSync(TEMP_DIR)) {
+  fs.mkdirSync(TEMP_DIR, { recursive: true });
+}
+
+// =======================
+// R2 CLIENT
+// =======================
 const r2 = new S3Client({
   region: "auto",
   endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
@@ -24,77 +41,71 @@ const r2 = new S3Client({
 });
 
 // =======================
-// VALIDASI ENV
-// =======================
-if (!API_KEY) {
-    console.error("API_KEY belum diset di environment");
-    process.exit(1);
-}
-
-// =======================
-// PASTIKAN FOLDER ADA
-// =======================
-if (!fs.existsSync(STORAGE_DIR)) {
-    fs.mkdirSync(STORAGE_DIR, { recursive: true });
-}
-
-// =======================
-// MULTER CONFIG
+// MULTER
 // =======================
 const upload = multer({
-    dest: "temp/",
-    limits: { fileSize: 50 * 1024 * 1024 } // 50MB
-});
-
-app.use((req, res, next) => {
-    console.log("➡️ Incoming:", req.method, req.url);
-    next();
+  dest: TEMP_DIR,
+  limits: { fileSize: 50 * 1024 * 1024 }
 });
 
 // =======================
-// ENDPOINT UPLOAD
+// REQUEST LOGGER (GLOBAL)
+// =======================
+app.use((req, res, next) => {
+  console.log("➡️", req.method, req.url);
+  next();
+});
+
+// =======================
+// UPLOAD ENDPOINT
 // =======================
 app.post("/backup/upload", upload.single("file"), async (req, res) => {
-  console.log("➡️ REQUEST MASUK");
-  console.log("API_KEY HEADER:", req.headers["x-api-key"]);
-  console.log("API_KEY ENV:", process.env.API_KEY);
-  
+  console.log("📦 Upload endpoint hit");
+
   try {
     const apiKey = req.headers["x-api-key"];
-    if (apiKey !== process.env.API_KEY) {
+    console.log("🔑 API KEY HEADER:", apiKey ? "ADA" : "KOSONG");
+
+    if (apiKey !== API_KEY) {
+      console.warn("❌ API KEY SALAH");
       return res.status(401).json({ error: "Unauthorized" });
     }
 
     if (!req.file) {
+      console.warn("❌ FILE TIDAK ADA");
       return res.status(400).json({ error: "File tidak ditemukan" });
     }
+
+    console.log("📁 File diterima:", req.file.originalname);
 
     const filename = Date.now() + "_" + req.file.originalname;
 
     await r2.send(new PutObjectCommand({
       Bucket: process.env.R2_BUCKET,
       Key: filename,
-      Body: require("fs").createReadStream(req.file.path),
+      Body: fs.createReadStream(req.file.path),
       ContentType: "application/zip"
     }));
 
+    console.log("✅ Upload ke R2 sukses:", filename);
+
     res.json({ success: true, filename });
   } catch (err) {
-    console.error(err);
+    console.error("🔥 ERROR:", err);
     res.status(500).json({ error: err.message });
   }
 });
 
 // =======================
-// ROOT CHECK
+// ROOT
 // =======================
 app.get("/", (req, res) => {
-    res.send("SoftwarePro Backup API OK");
+  res.send("SoftwarePro Backup API OK");
 });
 
 // =======================
-// START SERVER
+// START
 // =======================
 app.listen(PORT, () => {
-    console.log("SoftwarePro Backup API running on port", PORT);
+  console.log("🚀 Backup API running on port", PORT);
 });
