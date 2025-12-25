@@ -61,6 +61,11 @@ app.use((req, res, next) => {
 // =======================
 app.post("/backup/upload", upload.single("file"), async (req, res) => {
   console.log("📦 Upload endpoint hit");
+  console.log("===== AUTH DEBUG =====");
+  console.log("HEADER x-api-key :", req.headers["x-api-key"]);
+  console.log("ENV API_KEY     :", process.env.API_KEY);
+  console.log("MATCH           :", req.headers["x-api-key"] === process.env.API_KEY);
+  console.log("======================");
 
   try {
     const apiKey = req.headers["x-api-key"];
