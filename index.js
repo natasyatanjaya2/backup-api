@@ -12,6 +12,17 @@ const PORT = process.env.PORT || 3000;
 const API_KEY = process.env.API_KEY; // WAJIB dari ENV
 const STORAGE_DIR = "storage";
 
+const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
+
+const r2 = new S3Client({
+  region: "auto",
+  endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+  credentials: {
+    accessKeyId: process.env.R2_ACCESS_KEY_ID,
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY
+  }
+});
+
 // =======================
 // VALIDASI ENV
 // =======================
@@ -38,31 +49,31 @@ const upload = multer({
 // =======================
 // ENDPOINT UPLOAD
 // =======================
-app.post("/backup/upload", upload.single("file"), (req, res) => {
-
-    // Validasi API Key
+app.post("/backup/upload", upload.single("file"), async (req, res) => {
+  try {
     const apiKey = req.headers["x-api-key"];
-    if (!apiKey || apiKey !== API_KEY) {
-        return res.status(401).json({ error: "Unauthorized" });
+    if (apiKey !== process.env.API_KEY) {
+      return res.status(401).json({ error: "Unauthorized" });
     }
 
-    // Validasi file
     if (!req.file) {
-        return res.status(400).json({ error: "File tidak ditemukan" });
+      return res.status(400).json({ error: "File tidak ditemukan" });
     }
 
-    // Rename & simpan
-    const safeName = req.file.originalname.replace(/\s+/g, "_");
-    const filename = Date.now() + "_" + safeName;
+    const filename = Date.now() + "_" + req.file.originalname;
 
-    const targetPath = path.join(STORAGE_DIR, filename);
-    fs.renameSync(req.file.path, targetPath);
+    await r2.send(new PutObjectCommand({
+      Bucket: process.env.R2_BUCKET,
+      Key: filename,
+      Body: require("fs").createReadStream(req.file.path),
+      ContentType: "application/zip"
+    }));
 
-    // Response
-    res.json({
-        success: true,
-        filename: filename
-    });
+    res.json({ success: true, filename });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // =======================
