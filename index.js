@@ -6,23 +6,39 @@ const path = require("path");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ===== CONFIG =====
-const API_KEY = process.env.API_KEY || "DEV_KEY";
+// =======================
+// CONFIG
+// =======================
+const API_KEY = process.env.API_KEY; // WAJIB dari ENV
 const STORAGE_DIR = "storage";
 
-// ===== PASTIKAN FOLDER ADA =====
-if (!fs.existsSync(STORAGE_DIR)) {
-    fs.mkdirSync(STORAGE_DIR);
+// =======================
+// VALIDASI ENV
+// =======================
+if (!API_KEY) {
+    console.error("API_KEY belum diset di environment");
+    process.exit(1);
 }
 
-// ===== MULTER =====
+// =======================
+// PASTIKAN FOLDER ADA
+// =======================
+if (!fs.existsSync(STORAGE_DIR)) {
+    fs.mkdirSync(STORAGE_DIR, { recursive: true });
+}
+
+// =======================
+// MULTER CONFIG
+// =======================
 const upload = multer({
     dest: "temp/",
     limits: { fileSize: 50 * 1024 * 1024 } // 50MB
 });
 
-// ===== ENDPOINT UPLOAD =====
-app.post("/", upload.single("file"), (req, res) => {
+// =======================
+// ENDPOINT UPLOAD
+// =======================
+app.post("/backup/upload", upload.single("file"), (req, res) => {
 
     // Validasi API Key
     const apiKey = req.headers["x-api-key"];
@@ -36,8 +52,8 @@ app.post("/", upload.single("file"), (req, res) => {
     }
 
     // Rename & simpan
-    const filename =
-        Date.now() + "_" + req.file.originalname.replace(/\s/g, "_");
+    const safeName = req.file.originalname.replace(/\s+/g, "_");
+    const filename = Date.now() + "_" + safeName;
 
     const targetPath = path.join(STORAGE_DIR, filename);
     fs.renameSync(req.file.path, targetPath);
@@ -49,7 +65,16 @@ app.post("/", upload.single("file"), (req, res) => {
     });
 });
 
-// ===== START SERVER =====
+// =======================
+// ROOT CHECK
+// =======================
+app.get("/", (req, res) => {
+    res.send("SoftwarePro Backup API OK");
+});
+
+// =======================
+// START SERVER
+// =======================
 app.listen(PORT, () => {
     console.log("SoftwarePro Backup API running on port", PORT);
 });
