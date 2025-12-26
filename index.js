@@ -101,6 +101,46 @@ app.post("/backup/upload", upload.single("file"), async (req, res) => {
   }
 });
 
+app.get("/backup/list", async (req, res) => {
+  if (req.headers["x-api-key"] !== process.env.API_KEY) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const { ListObjectsV2Command } = require("@aws-sdk/client-s3");
+
+  const result = await r2.send(new ListObjectsV2Command({
+    Bucket: process.env.R2_BUCKET
+  }));
+
+  const files = (result.Contents || []).map(f => ({
+    filename: f.Key,
+    size: f.Size,
+    lastModified: f.LastModified
+  }));
+
+  res.json(files);
+});
+
+app.get("/backup/download/:filename", async (req, res) => {
+  if (req.headers["x-api-key"] !== process.env.API_KEY) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const { GetObjectCommand } = require("@aws-sdk/client-s3");
+
+  const file = await r2.send(new GetObjectCommand({
+    Bucket: process.env.R2_BUCKET,
+    Key: req.params.filename
+  }));
+
+  res.setHeader(
+    "Content-Disposition",
+    `attachment; filename="${req.params.filename}"`
+  );
+
+  file.Body.pipe(res);
+});
+
 // =======================
 // ROOT
 // =======================
