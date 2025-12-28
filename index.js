@@ -216,17 +216,20 @@ app.post("/auth/send-code", express.json(), async (req, res) => {
       );
     }
 
-    // =======================
-    // SEND EMAIL
-    // =======================
-    await mailer.sendMail({
+    res.json({ success: true });
+
+    mailer.sendMail({
       from: `"SoftwarePro" <${process.env.SMTP_USER}>`,
       to: email,
       subject: "Kode Verifikasi SoftwarePro",
       text: `Kode verifikasi Anda adalah:\n\n${code}\n\nBerlaku 5 menit.`
+    })
+    .then(() => {
+      console.log("EMAIL SENT:", email);
+    })
+    .catch(err => {
+      console.error("EMAIL FAIL:", err);
     });
-
-    res.json({ success: true });
   } catch (err) {
     console.error("🔥 SEND CODE ERROR:", err);
     res.status(500).json({ error: "Gagal mengirim kode" });
