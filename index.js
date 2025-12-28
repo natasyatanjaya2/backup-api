@@ -13,6 +13,9 @@ const PORT = process.env.PORT || 3000;
 const API_KEY = process.env.API_KEY;
 const TEMP_DIR = "temp";
 
+const mysql = require("mysql2/promise");
+const nodemailer = require("nodemailer");
+
 // =======================
 // VALIDASI ENV
 // =======================
@@ -54,6 +57,30 @@ const upload = multer({
 app.use((req, res, next) => {
   console.log("➡️", req.method, req.url);
   next();
+});
+
+// =======================
+// DB CONNECTION
+// =======================
+const db = mysql.createPool({
+  host: process.env.DB_HOST,
+  port: process.env.DB_PORT,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME
+});
+
+// =======================
+// EMAIL TRANSPORTER
+// =======================
+const mailer = nodemailer.createTransport({
+  host: process.env.SMTP_HOST,
+  port: process.env.SMTP_PORT,
+  secure: false,
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS
+  }
 });
 
 // =======================
@@ -139,6 +166,71 @@ app.get("/backup/download/:filename", async (req, res) => {
   );
 
   file.Body.pipe(res);
+});
+
+app.post("/auth/send-code", express.json(), async (req, res) => {
+  try {
+    // =======================
+    // API KEY CHECK
+    // =======================
+    if (req.headers["x-api-key"] !== API_KEY) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const { username, email } = req.body;
+
+    if (!username || !email || !email.includes("@")) {
+      return res.status(400).json({ error: "Data tidak valid" });
+    }
+
+    // =======================
+    // GENERATE CODE
+    // =======================
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expired = new Date(Date.now() + 5 * 60 * 1000); // 5 menit
+
+    // =======================
+    // INSERT / UPDATE USER
+    // =======================
+    const [rows] = await db.query(
+      "SELECT id FROM users WHERE email = ?",
+      [email]
+    );
+
+    if (rows.length > 0) {
+      await db.query(
+        `UPDATE users SET
+          username = ?,
+          email_verified = 0,
+          email_verification_code = ?,
+          email_verification_expired = ?
+         WHERE email = ?`,
+        [username, code, expired, email]
+      );
+    } else {
+      await db.query(
+        `INSERT INTO users
+          (username, email, email_verified, email_verification_code, email_verification_expired)
+         VALUES (?, ?, 0, ?, ?)`,
+        [username, email, code, expired]
+      );
+    }
+
+    // =======================
+    // SEND EMAIL
+    // =======================
+    await mailer.sendMail({
+      from: `"SoftwarePro" <${process.env.SMTP_USER}>`,
+      to: email,
+      subject: "Kode Verifikasi SoftwarePro",
+      text: `Kode verifikasi Anda adalah:\n\n${code}\n\nBerlaku 5 menit.`
+    });
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("🔥 SEND CODE ERROR:", err);
+    res.status(500).json({ error: "Gagal mengirim kode" });
+  }
 });
 
 // =======================
