@@ -15,6 +15,8 @@ const TEMP_DIR = "temp";
 
 const mysql = require("mysql2/promise");
 const nodemailer = require("nodemailer");
+const { Resend } = require("resend");
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // =======================
 // VALIDASI ENV
@@ -218,17 +220,17 @@ app.post("/auth/send-code", express.json(), async (req, res) => {
 
     res.json({ success: true });
 
-    mailer.sendMail({
-      from: `"SoftwarePro" <${process.env.SMTP_USER}>`,
+    resend.emails.send({
+      from: "SoftwarePro <noreply@softwarepro.dev>",
       to: email,
       subject: "Kode Verifikasi SoftwarePro",
       text: `Kode verifikasi Anda adalah:\n\n${code}\n\nBerlaku 5 menit.`
     })
     .then(() => {
-      console.log("EMAIL SENT:", email);
+      console.log("EMAIL SENT VIA RESEND");
     })
     .catch(err => {
-      console.error("EMAIL FAIL:", err);
+      console.error("RESEND EMAIL FAIL:", err);
     });
   } catch (err) {
     console.error("🔥 SEND CODE ERROR:", err);
