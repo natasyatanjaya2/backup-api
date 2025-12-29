@@ -172,7 +172,7 @@ app.get("/backup/download/:filename", async (req, res) => {
 
 async function sendVerificationEmail(email, code) {
   await resend.emails.send({
-    from: "SoftwarePro <prosoftware087@gmail.com>",
+    from: "SoftwarePro <email@example.com>",
     to: [email],
     subject: "Kode Verifikasi SoftwarePro",
     html: `
