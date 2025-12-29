@@ -236,8 +236,8 @@ app.post("/auth/send-code", express.json(), async (req, res) => {
       );
     }
 
-    res.json({ success: true });
     await sendVerificationEmail(email, code);
+    res.json({ success: true });
   } catch (err) {
     console.error("🔥 SEND CODE ERROR:", err);
     res.status(500).json({ error: "Gagal mengirim kode" });
