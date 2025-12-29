@@ -170,7 +170,7 @@ app.get("/backup/download/:filename", async (req, res) => {
   file.Body.pipe(res);
 });
 
-export async function sendVerificationEmail(email, code) {
+async function sendVerificationEmail(email, code) {
   await resend.emails.send({
     from: "SoftwarePro <onboarding@resend.dev>",
     to: [email],
