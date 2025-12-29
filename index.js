@@ -222,12 +222,19 @@ app.post("/auth/send-code", express.json(), async (req, res) => {
 
     resend.emails.send({
       from: "SoftwarePro <onboarding@resend.dev>",
-      to: "prosoftware087@gmail.com",
+      to: email, // contoh: prosoftware087@gmail.com
       subject: "Kode Verifikasi SoftwarePro",
-      html: "<p>Ini adalah email percobaan dari <b>SoftwarePro</b></p>"
+      html: `
+        <div style="font-family: Arial, sans-serif;">
+          <h2>Kode Verifikasi SoftwarePro</h2>
+          <p>Gunakan kode berikut untuk melanjutkan registrasi:</p>
+          <h1 style="letter-spacing:4px;">${code}</h1>
+          <p><small>Berlaku 5 menit</small></p>
+        </div>
+      `
     })
-    .then(data => {
-      console.log("EMAIL SENT:", data);
+    .then(() => {
+      console.log("EMAIL SENT VIA RESEND");
     })
     .catch(err => {
       console.error("EMAIL FAIL:", err);
