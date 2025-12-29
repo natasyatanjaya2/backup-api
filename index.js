@@ -236,16 +236,46 @@ app.post("/auth/send-code", express.json(), async (req, res) => {
       );
     }
 
-    await sendVerificationEmail(
-      "delivered@resend.dev",
-      code
-    );
+    // =======================
+    // SEND EMAIL
+    // =======================
+    await mailer.sendMail({
+      from: `"SoftwarePro" <${process.env.SMTP_USER}>`,
+      to: email,
+      subject: "Kode Verifikasi SoftwarePro",
+      text: `Kode verifikasi Anda adalah:\n\n${code}\n\nBerlaku 5 menit.`
+    });
     res.json({ success: true });
   } catch (err) {
     console.error("🔥 SEND CODE ERROR:", err);
     res.status(500).json({ error: "Gagal mengirim kode" });
   }
 });
+
+async function sendOtpEmail(email, otp) {
+  const transporter = nodemailer.createTransport({
+    host: "smtp.sendgrid.net",
+    port: 587,
+    secure: false,
+    auth: {
+      user: "apikey",               // FIX untuk SendGrid
+      pass: process.env.SENDGRID_API_KEY
+    }
+  });
+
+  const messageBody = `
+    <p>Untuk verifikasi email Anda, masukkan kode berikut:</p>
+    <h2>${otp}</h2>
+    <p>Salam,<br/>SoftwarePro</p>
+  `;
+
+  await transporter.sendMail({
+    from: `"SoftwarePro" <noreply@softwarepro.my.id>`,
+    to: email,
+    subject: "Verification code for Verify Your Email Address",
+    html: messageBody
+  });
+}
 
 // =======================
 // ROOT
