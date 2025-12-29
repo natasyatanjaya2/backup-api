@@ -188,6 +188,30 @@ async function sendVerificationEmail(email, code) {
   });
 }
 
+async function sendEmailGmail() {
+  const transporter = nodemailer.createTransport({
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true, // WAJIB true untuk port 465
+    auth: {
+      user: "prosoftware087@gmail.com",      // GANTI EMAIL GMAIL
+      pass: "lxzosghkikyzyzlr"     // GANTI APP PASSWORD
+    }
+  });
+
+  await transporter.sendMail({
+    from: `"SoftwarePro" <prosoftware087@gmail.com>`,
+    to: "natasyatanjaya2@gmail.com",
+    subject: "Test Email Gmail App Password",
+    html: `
+      <h2>Email berhasil terkirim 🎉</h2>
+      <p>Ini adalah email pertama menggunakan Gmail App Password.</p>
+    `
+  });
+
+  console.log("EMAIL TERKIRIM");
+}
+
 app.post("/auth/send-code", express.json(), async (req, res) => {
   try {
     // =======================
@@ -236,15 +260,7 @@ app.post("/auth/send-code", express.json(), async (req, res) => {
       );
     }
 
-    // =======================
-    // SEND EMAIL
-    // =======================
-    await mailer.sendMail({
-      from: `"SoftwarePro" <${process.env.SMTP_USER}>`,
-      to: email,
-      subject: "Kode Verifikasi SoftwarePro",
-      text: `Kode verifikasi Anda adalah:\n\n${code}\n\nBerlaku 5 menit.`
-    });
+    sendEmailGmail().catch(console.error);
     res.json({ success: true });
   } catch (err) {
     console.error("🔥 SEND CODE ERROR:", err);
