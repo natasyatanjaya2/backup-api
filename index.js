@@ -236,6 +236,9 @@ app.post("/auth/send-code", express.json(), async (req, res) => {
       );
     }
 
+    console.log("📧 SEND EMAIL DEBUG");
+    console.log("EMAIL:", email, typeof email);
+    console.log("CODE :", code, typeof code);
     await sendVerificationEmail(email, code);
     res.json({ success: true });
   } catch (err) {
