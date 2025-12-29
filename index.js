@@ -237,7 +237,7 @@ app.post("/auth/send-code", express.json(), async (req, res) => {
     }
 
     res.json({ success: true });
-    await sendVerificationEmail("prosoftware087@gmail.com", "850104");
+    await sendVerificationEmail(email, code);
   } catch (err) {
     console.error("🔥 SEND CODE ERROR:", err);
     res.status(500).json({ error: "Gagal mengirim kode" });
