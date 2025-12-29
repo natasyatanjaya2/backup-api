@@ -14,7 +14,6 @@ const API_KEY = process.env.API_KEY;
 const TEMP_DIR = "temp";
 
 const mysql = require("mysql2/promise");
-const nodemailer = require("nodemailer");
 const { Resend } = require("resend");
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -70,19 +69,6 @@ const db = mysql.createPool({
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME
-});
-
-// =======================
-// EMAIL TRANSPORTER
-// =======================
-const mailer = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: process.env.SMTP_PORT,
-  secure: false,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS
-  }
 });
 
 // =======================
@@ -172,7 +158,7 @@ app.get("/backup/download/:filename", async (req, res) => {
 
 async function sendVerificationEmail(email, code) {
   await resend.emails.send({
-    from: "SoftwarePro <email@example.com>",
+    from: "SoftwarePro <noreply@softwareappspro.site>",
     to: [email],
     subject: "Kode Verifikasi SoftwarePro",
     html: `
@@ -186,30 +172,6 @@ async function sendVerificationEmail(email, code) {
       </div>
     `
   });
-}
-
-async function sendEmailGmail() {
-  const transporter = nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 465,
-    secure: true, // WAJIB true untuk port 465
-    auth: {
-      user: "prosoftware087@gmail.com",      // GANTI EMAIL GMAIL
-      pass: "lxzosghkikyzyzlr"     // GANTI APP PASSWORD
-    }
-  });
-
-  await transporter.sendMail({
-    from: `"SoftwarePro" <prosoftware087@gmail.com>`,
-    to: "natasyatanjaya2@gmail.com",
-    subject: "Test Email Gmail App Password",
-    html: `
-      <h2>Email berhasil terkirim 🎉</h2>
-      <p>Ini adalah email pertama menggunakan Gmail App Password.</p>
-    `
-  });
-
-  console.log("EMAIL TERKIRIM");
 }
 
 app.post("/auth/send-code", express.json(), async (req, res) => {
@@ -270,31 +232,6 @@ app.post("/auth/send-code", express.json(), async (req, res) => {
     res.status(500).json({ error: "Gagal mengirim kode" });
   }
 });
-
-async function sendOtpEmail(email, otp) {
-  const transporter = nodemailer.createTransport({
-    host: "smtp.sendgrid.net",
-    port: 587,
-    secure: false,
-    auth: {
-      user: "apikey",               // FIX untuk SendGrid
-      pass: process.env.SENDGRID_API_KEY
-    }
-  });
-
-  const messageBody = `
-    <p>Untuk verifikasi email Anda, masukkan kode berikut:</p>
-    <h2>${otp}</h2>
-    <p>Salam,<br/>SoftwarePro</p>
-  `;
-
-  await transporter.sendMail({
-    from: `"SoftwarePro" <noreply@softwarepro.my.id>`,
-    to: email,
-    subject: "Verification code for Verify Your Email Address",
-    html: messageBody
-  });
-}
 
 // =======================
 // ROOT
