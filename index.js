@@ -170,6 +170,24 @@ app.get("/backup/download/:filename", async (req, res) => {
   file.Body.pipe(res);
 });
 
+export async function sendVerificationEmail(email, code) {
+  await resend.emails.send({
+    from: "SoftwarePro <onboarding@resend.dev>",
+    to: [email],
+    subject: "Kode Verifikasi SoftwarePro",
+    html: `
+      <div style="font-family: Arial, sans-serif">
+        <h2>Kode Verifikasi SoftwarePro</h2>
+        <p>Gunakan kode berikut untuk melanjutkan registrasi:</p>
+        <h1 style="letter-spacing: 4px;">${code}</h1>
+        <p style="font-size:12px;color:#666">
+          Kode berlaku selama 5 menit.
+        </p>
+      </div>
+    `
+  });
+}
+
 app.post("/auth/send-code", express.json(), async (req, res) => {
   try {
     // =======================
@@ -219,26 +237,7 @@ app.post("/auth/send-code", express.json(), async (req, res) => {
     }
 
     res.json({ success: true });
-
-    resend.emails.send({
-      from: "SoftwarePro <onboarding@resend.dev>",
-      to: email, // contoh: prosoftware087@gmail.com
-      subject: "Kode Verifikasi SoftwarePro",
-      html: `
-        <div style="font-family: Arial, sans-serif;">
-          <h2>Kode Verifikasi SoftwarePro</h2>
-          <p>Gunakan kode berikut untuk melanjutkan registrasi:</p>
-          <h1 style="letter-spacing:4px;">${code}</h1>
-          <p><small>Berlaku 5 menit</small></p>
-        </div>
-      `
-    })
-    .then(() => {
-      console.log("EMAIL SENT VIA RESEND");
-    })
-    .catch(err => {
-      console.error("EMAIL FAIL:", err);
-    });
+    await sendVerificationEmail("prosoftware087@gmail.com", "850104");
   } catch (err) {
     console.error("🔥 SEND CODE ERROR:", err);
     res.status(500).json({ error: "Gagal mengirim kode" });
