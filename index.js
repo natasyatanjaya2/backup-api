@@ -221,16 +221,16 @@ app.post("/auth/send-code", express.json(), async (req, res) => {
     res.json({ success: true });
 
     resend.emails.send({
-      from: "SoftwarePro <noreply@softwarepro.dev>",
-      to: email,
+      from: "SoftwarePro <onboarding@resend.dev>",
+      to: "prosoftware087@gmail.com",
       subject: "Kode Verifikasi SoftwarePro",
-      text: `Kode verifikasi Anda adalah:\n\n${code}\n\nBerlaku 5 menit.`
+      html: "<p>Ini adalah email percobaan dari <b>SoftwarePro</b></p>"
     })
-    .then(() => {
-      console.log("EMAIL SENT VIA RESEND");
+    .then(data => {
+      console.log("EMAIL SENT:", data);
     })
     .catch(err => {
-      console.error("RESEND EMAIL FAIL:", err);
+      console.error("EMAIL FAIL:", err);
     });
   } catch (err) {
     console.error("🔥 SEND CODE ERROR:", err);
