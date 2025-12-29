@@ -172,7 +172,7 @@ app.get("/backup/download/:filename", async (req, res) => {
 
 async function sendVerificationEmail(email, code) {
   await resend.emails.send({
-    from: "SoftwarePro <onboarding@resend.dev>",
+    from: "SoftwarePro <prosoftware087@gmail.com>",
     to: [email],
     subject: "Kode Verifikasi SoftwarePro",
     html: `
@@ -260,7 +260,10 @@ app.post("/auth/send-code", express.json(), async (req, res) => {
       );
     }
 
-    sendEmailGmail().catch(console.error);
+    await sendVerificationEmail(
+      email,
+      code
+    );
     res.json({ success: true });
   } catch (err) {
     console.error("🔥 SEND CODE ERROR:", err);
