@@ -236,10 +236,10 @@ app.post("/auth/send-code", express.json(), async (req, res) => {
       );
     }
 
-    console.log("📧 SEND EMAIL DEBUG");
-    console.log("EMAIL:", email, typeof email);
-    console.log("CODE :", code, typeof code);
-    await sendVerificationEmail(email, code);
+    await sendVerificationEmail(
+      "delivered@resend.dev",
+      code
+    );
     res.json({ success: true });
   } catch (err) {
     console.error("🔥 SEND CODE ERROR:", err);
