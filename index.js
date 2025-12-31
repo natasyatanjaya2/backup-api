@@ -3,6 +3,7 @@ const multer = require("multer");
 const fs = require("fs");
 const path = require("path");
 const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
+const bcrypt = require("bcrypt");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -230,6 +231,59 @@ app.post("/auth/send-code", express.json(), async (req, res) => {
   } catch (err) {
     console.error("🔥 SEND CODE ERROR:", err);
     res.status(500).json({ error: "Gagal mengirim kode" });
+  }
+});
+
+app.post("/auth/verify-code", express.json(), async (req, res) => {
+  try {
+    const { email, code, password } = req.body;
+
+    if (!email || !code || !password) {
+      return res.status(400).json({ error: "Data tidak lengkap" });
+    }
+
+    // Ambil user
+    const [rows] = await db.query(
+      `SELECT id, email_verification_code, email_verification_expired
+       FROM users
+       WHERE email = ?`,
+      [email]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: "User tidak ditemukan" });
+    }
+
+    const user = rows[0];
+
+    // Cek kode
+    if (user.email_verification_code !== code) {
+      return res.status(400).json({ error: "Kode verifikasi salah" });
+    }
+
+    // Cek expired
+    if (new Date(user.email_verification_expired) < new Date()) {
+      return res.status(400).json({ error: "Kode sudah kadaluarsa" });
+    }
+
+    // Hash password
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    // Update user
+    await db.query(
+      `UPDATE users SET
+        password_hash = ?,
+        email_verified = 1,
+        email_verification_code = NULL,
+        email_verification_expired = NULL
+       WHERE email = ?`,
+      [passwordHash, email]
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error("VERIFY ERROR:", err);
+    res.status(500).json({ error: "Verifikasi gagal" });
   }
 });
 
