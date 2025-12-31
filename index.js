@@ -76,31 +76,48 @@ const db = mysql.createPool({
 // UPLOAD ENDPOINT
 // =======================
 app.post("/backup/upload", upload.single("file"), async (req, res) => {
-  console.log("📦 Upload endpoint hit");
-  console.log("===== AUTH DEBUG =====");
-  console.log("HEADER x-api-key :", req.headers["x-api-key"]);
-  console.log("ENV API_KEY     :", process.env.API_KEY);
-  console.log("MATCH           :", req.headers["x-api-key"] === process.env.API_KEY);
-  console.log("======================");
-
   try {
+    // ======================
+    // API KEY CHECK
+    // ======================
     const apiKey = req.headers["x-api-key"];
-    console.log("🔑 API KEY HEADER:", apiKey ? "ADA" : "KOSONG");
-
     if (apiKey !== API_KEY) {
       console.warn("❌ API KEY SALAH");
       return res.status(401).json({ error: "Unauthorized" });
     }
 
+    // ======================
+    // FILE CHECK
+    // ======================
     if (!req.file) {
       console.warn("❌ FILE TIDAK ADA");
       return res.status(400).json({ error: "File tidak ditemukan" });
     }
 
+    // ======================
+    // EMAIL CHECK (WAJIB)
+    // ======================
+    const email = req.body.email;
+    if (!email) {
+      return res.status(400).json({ error: "Email wajib dikirim" });
+    }
+
+    // ======================
+    // AMANKAN EMAIL
+    // ======================
+    const safeEmail = email.replace(/[^a-zA-Z0-9@._-]/g, "");
+
+    console.log("📧 Backup dari email:", safeEmail);
     console.log("📁 File diterima:", req.file.originalname);
 
-    const filename = Date.now() + "_" + req.file.originalname;
+    // ======================
+    // PATH DI CLOUD
+    // ======================
+    const filename = `${safeEmail}/${Date.now()}_${req.file.originalname}`;
 
+    // ======================
+    // UPLOAD KE R2
+    // ======================
     await r2.send(new PutObjectCommand({
       Bucket: process.env.R2_BUCKET,
       Key: filename,
@@ -110,7 +127,15 @@ app.post("/backup/upload", upload.single("file"), async (req, res) => {
 
     console.log("✅ Upload ke R2 sukses:", filename);
 
-    res.json({ success: true, filename });
+    // ======================
+    // RESPONSE
+    // ======================
+    res.json({
+      success: true,
+      email: safeEmail,
+      filename: filename
+    });
+
   } catch (err) {
     console.error("🔥 ERROR:", err);
     res.status(500).json({ error: err.message });
