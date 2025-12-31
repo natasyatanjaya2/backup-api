@@ -3,6 +3,7 @@ const multer = require("multer");
 const fs = require("fs");
 const path = require("path");
 const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
+const { ListObjectsV2Command } = require("@aws-sdk/client-s3");
 const bcrypt = require("bcryptjs");
 
 const app = express();
@@ -13,8 +14,8 @@ const PORT = process.env.PORT || 3000;
 // =======================
 const API_KEY = process.env.API_KEY;
 const TEMP_DIR = "temp";
-
 const mysql = require("mysql2/promise");
+
 const { Resend } = require("resend");
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -143,23 +144,51 @@ app.post("/backup/upload", upload.single("file"), async (req, res) => {
 });
 
 app.get("/backup/list", async (req, res) => {
-  if (req.headers["x-api-key"] !== process.env.API_KEY) {
-    return res.status(401).json({ error: "Unauthorized" });
+  try {
+    // ======================
+    // API KEY CHECK
+    // ======================
+    if (req.headers["x-api-key"] !== process.env.API_KEY) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    // ======================
+    // EMAIL CHECK
+    // ======================
+    const email = req.query.email;
+    if (!email) {
+      return res.status(400).json({ error: "Email wajib dikirim" });
+    }
+
+    // ======================
+    // AMANKAN EMAIL
+    // ======================
+    const safeEmail = email.replace(/[^a-zA-Z0-9@._-]/g, "");
+
+    // ======================
+    // LIST FILE BY PREFIX
+    // ======================
+    const result = await r2.send(
+      new ListObjectsV2Command({
+        Bucket: process.env.R2_BUCKET,
+        Prefix: `${safeEmail}/`
+      })
+    );
+
+    // ======================
+    // FORMAT RESPONSE
+    // ======================
+    const files = (result.Contents || []).map(f => ({
+      filename: f.Key,           // contoh: email/file.zip
+      size: f.Size,
+      lastModified: f.LastModified
+    }));
+
+    res.json(files);
+  } catch (err) {
+    console.error("LIST BACKUP ERROR:", err);
+    res.status(500).json({ error: err.message });
   }
-
-  const { ListObjectsV2Command } = require("@aws-sdk/client-s3");
-
-  const result = await r2.send(new ListObjectsV2Command({
-    Bucket: process.env.R2_BUCKET
-  }));
-
-  const files = (result.Contents || []).map(f => ({
-    filename: f.Key,
-    size: f.Size,
-    lastModified: f.LastModified
-  }));
-
-  res.json(files);
 });
 
 app.get("/backup/download/:filename", async (req, res) => {
