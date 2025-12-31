@@ -4,6 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 const { ListObjectsV2Command } = require("@aws-sdk/client-s3");
+const { GetObjectCommand } = require("@aws-sdk/client-s3");
 const bcrypt = require("bcryptjs");
 
 const app = express();
@@ -191,24 +192,57 @@ app.get("/backup/list", async (req, res) => {
   }
 });
 
-app.get("/backup/download/:filename", async (req, res) => {
-  if (req.headers["x-api-key"] !== process.env.API_KEY) {
-    return res.status(401).json({ error: "Unauthorized" });
+app.get("/backup/download", async (req, res) => {
+  try {
+    // ======================
+    // API KEY CHECK
+    // ======================
+    if (req.headers["x-api-key"] !== process.env.API_KEY) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    // ======================
+    // PARAMETER WAJIB
+    // ======================
+    const { email, filename } = req.query;
+
+    if (!email || !filename) {
+      return res.status(400).json({ error: "Email dan filename wajib" });
+    }
+
+    // ======================
+    // AMANKAN INPUT
+    // ======================
+    const safeEmail = email.replace(/[^a-zA-Z0-9@._-]/g, "");
+    const safeFilename = filename.replace(/[^a-zA-Z0-9._-]/g, "");
+
+    // ======================
+    // PATH DI STORAGE
+    // ======================
+    const key = `${safeEmail}/${safeFilename}`;
+
+    // ======================
+    // GET FILE
+    // ======================
+    const file = await r2.send(new GetObjectCommand({
+      Bucket: process.env.R2_BUCKET,
+      Key: key
+    }));
+
+    // ======================
+    // RESPONSE STREAM
+    // ======================
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${safeFilename}"`
+    );
+
+    file.Body.pipe(res);
   }
-
-  const { GetObjectCommand } = require("@aws-sdk/client-s3");
-
-  const file = await r2.send(new GetObjectCommand({
-    Bucket: process.env.R2_BUCKET,
-    Key: req.params.filename
-  }));
-
-  res.setHeader(
-    "Content-Disposition",
-    `attachment; filename="${req.params.filename}"`
-  );
-
-  file.Body.pipe(res);
+  catch (err) {
+    console.error("DOWNLOAD ERROR:", err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 async function sendVerificationEmail(email, code) {
